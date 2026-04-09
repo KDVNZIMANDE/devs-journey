@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist } from "next/font/google";
+import SessionProvider from "@/context/SessionContext";
 import "./globals.css";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
@@ -17,9 +18,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en" className="h-full">
         <body className={`${geist.className} min-h-full bg-gray-50 text-gray-900 antialiased`}>
-          <Header />
-          {children}
-          <Footer />
+          <SessionProvider>
+            <Header />
+            {children}
+            <Footer />
+          </SessionProvider>
         </body>
       </html>
     </ClerkProvider>
