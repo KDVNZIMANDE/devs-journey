@@ -16,7 +16,11 @@ export async function GET() {
 
     await connectDB();
     const user = await User.exists({ clerkId: userId });
-    return NextResponse.json({ exists: !!user });
+    if (user){
+    return NextResponse.json({ exists: user });
+    }
+    return NextResponse.json({ exists: false });
+
   } catch (error) {
     console.error("[GET /api/user/exists]", error);
     return NextResponse.json({ exists: false }, { status: 500 });

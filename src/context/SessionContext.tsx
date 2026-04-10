@@ -97,11 +97,13 @@ export default function SessionProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!isSignedIn) return;
 
-    const fetch = async () => {
+    const fetchProjects = async () => {
       setIsLoadingProjects(true);
       try {
         const result = await getProjects();
-        if (result.success && result.data) setProjects(result.data);
+        if (result.success && result.data) {
+          setProjects(result.data.projects);
+        }
       } catch {
         // keep previous state
       } finally {
@@ -109,7 +111,7 @@ export default function SessionProvider({ children }: { children: React.ReactNod
       }
     };
 
-    fetch();
+    fetchProjects();
   }, [isSignedIn, reloadProjectsTrigger]);
 
   // ── SSE ──────────────────────────────────────────────────────────────────
