@@ -67,7 +67,7 @@ export default function OnboardingPage() {
         return;
       }
 
-      document.cookie = "onboarding_complete=true; path=/; max-age=31536000; SameSite=Lax";
+      document.cookie = "Onboarding_complete=true; path=/; max-age=31536000; SameSite=Lax";
       router.replace("/feed");
 
     } catch (err) {

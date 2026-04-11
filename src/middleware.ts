@@ -20,7 +20,7 @@ export default clerkMiddleware(async (auth, req) => {
   if (isApiRoute(req)) return NextResponse.next();
 
   // Check cookie first — avoids a DB call on every request
-  const onboardingCookie = req.cookies.get("onboarding_complete")?.value;
+  const onboardingCookie = req.cookies.get("Onboarding_complete")?.value;
   const isOnboarded = onboardingCookie === "true";
 
   if (!isOnboarded) {
