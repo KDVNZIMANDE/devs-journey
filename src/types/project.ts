@@ -50,6 +50,7 @@ export type Project = {
   isCompleted:       boolean;
   completedAt?:      string;
   viewCount:         number;
+  commentCount:      number;
   createdAt:         string;
   updatedAt:         string;
   author?:           Author | null;

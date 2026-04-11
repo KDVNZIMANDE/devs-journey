@@ -8,6 +8,7 @@ import { ok, fail } from "@/lib/response/response";
 
 export async function GET(req: NextRequest) {
   try {
+    const { userId } = await auth();  
     await connectDB();
 
     const { searchParams } = new URL(req.url);
@@ -15,9 +16,13 @@ export async function GET(req: NextRequest) {
     const limit     = Math.min(20, Number(searchParams.get("limit") ?? 10));
     const stage     = searchParams.get("stage");
     const completed = searchParams.get("completed");
+    const mine      = searchParams.get("mine") === "true";  
+
+    if (mine && !userId) return fail("Unauthorised", "GET /api/projects", undefined, 401);  
 
     const filter: Record<string, unknown> = {};
-    if (stage)          filter.stage       = stage;
+    if (mine)               filter.authorId    = userId;         
+    if (stage)              filter.stage       = stage;
     if (completed !== null) filter.isCompleted = completed === "true";
 
     const [projects, total] = await Promise.all([

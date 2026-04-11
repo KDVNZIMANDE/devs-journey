@@ -18,7 +18,7 @@ export default async function FeedPage() {
     .select("clerkId firstName lastName imageUrl username")
     .lean();
 
-  const authorMap      = Object.fromEntries(authors.map((a) => [a.clerkId, a]));
+  const authorMap       = Object.fromEntries(authors.map((a) => [a.clerkId, a]));
   const initialProjects = projects.map((p) => ({
     ...p,
     _id:    p._id.toString(),
@@ -26,29 +26,30 @@ export default async function FeedPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-white font-[family-name:var(--font-manrope)]">
+    <div className="min-h-screen bg-zinc-950 font-[family-name:var(--font-manrope)]">
 
       {/* Page header */}
-      <div className="border-b border-zinc-200">
-        <div className="mx-auto max-w-[1100px] px-6 py-10">
+      <div className="relative border-b border-zinc-800 overflow-hidden">
+        {/* Radial glow — matches celebration wall header */}
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-green-500/5 blur-3xl" />
+
+        <div className="relative mx-auto max-w-[1100px] px-6 py-12">
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
-              <span className="inline-block bg-green-100 text-green-700 font-mono text-[11px] font-medium tracking-[0.08em] px-[10px] py-[3px] rounded-full mb-3">
+              <span className="inline-flex items-center gap-1.5 bg-green-950 text-green-400 font-mono text-[11px] font-medium tracking-[0.08em] px-[10px] py-[4px] rounded-full mb-4 border border-green-900">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                 Live feed
               </span>
-              <h1 className="font-[family-name:var(--font-dm-serif)] text-[clamp(32px,4vw,48px)] leading-[1.05] tracking-[-0.03em] text-zinc-900 m-0">
-                What&apos;s being built,<br />
-                <span className="text-green-600">right now.</span>
+              <h1 className="font-[family-name:var(--font-dm-serif)] text-[clamp(32px,4vw,52px)] leading-[1.02] tracking-[-0.03em] text-zinc-100 m-0">
+                What&apos;s being built,
+                <br />
+                <span className="text-green-400">right now.</span>
               </h1>
             </div>
             <div className="flex items-center gap-3 pb-1">
-              <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-green-600 bg-green-50 px-3 py-1.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Live
-              </span>
               <Link
                 href="/projects/new"
-                className="inline-flex items-center gap-2 px-5 py-[10px] bg-zinc-900 text-white rounded font-semibold text-[14px] transition hover:bg-zinc-800 hover:-translate-y-px no-underline"
+                className="inline-flex items-center gap-2 px-5 py-[10px] bg-zinc-100 text-zinc-900 rounded-lg font-semibold text-[14px] transition hover:bg-white hover:-translate-y-px no-underline"
               >
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                   <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

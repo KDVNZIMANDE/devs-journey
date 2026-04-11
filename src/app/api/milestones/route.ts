@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db/mongoose";
 import { Milestone, Project } from "@/models";
 import { createMilestoneSchema } from "@/lib/validations";
 import { broadcast } from "@/lib/sse/connections";
+import { ok, fail } from "@/lib/response/response";
 
 /**
  * GET /api/milestones?projectId=xxx
@@ -12,17 +13,14 @@ import { broadcast } from "@/lib/sse/connections";
 export async function GET(req: NextRequest) {
   try {
     const projectId = new URL(req.url).searchParams.get("projectId");
-    if (!projectId) {
-      return NextResponse.json({ error: "projectId is required" }, { status: 400 });
-    }
+    if (!projectId) return fail("projectId is required", "GET /api/milestones", undefined, 400);
 
     await connectDB();
     const milestones = await Milestone.find({ projectId }).sort({ createdAt: -1 }).lean();
 
-    return NextResponse.json({ milestones });
+    return ok("GET /api/milestones", milestones);
   } catch (error) {
-    console.error("[GET /api/milestones]", error);
-    return NextResponse.json({ error: "Failed to fetch milestones" }, { status: 500 });
+    return fail((error as Error).message, "GET /api/milestones", undefined, 500);
   }
 }
 
@@ -34,41 +32,31 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-    }
+    if (!userId) return fail("Unauthorised", "POST /api/milestones", undefined, 401);
 
-    const body = await req.json();
+    const body   = await req.json();
     const parsed = createMilestoneSchema.safeParse(body);
-
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Validation failed", issues: parsed.error.flatten() },
-        { status: 400 }
+      return fail(
+        JSON.stringify(parsed.error.flatten().fieldErrors),
+        "POST /api/milestones",
+        userId,
+        400
       );
     }
 
     await connectDB();
 
-    // Verify the user owns the project
     const project = await Project.findById(parsed.data.projectId);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-    if (project.authorId !== userId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    if (!project)                    return fail("Project not found", "POST /api/milestones", userId, 404);
+    if (project.authorId !== userId) return fail("Forbidden",        "POST /api/milestones", userId, 403);
 
-    const milestone = await Milestone.create({
-      ...parsed.data,
-      authorId: userId,
-    });
+    const milestone = await Milestone.create({ ...parsed.data, authorId: userId });
 
     broadcast("new_milestone", { milestone: milestone.toObject(), projectTitle: project.title });
 
-    return NextResponse.json(milestone, { status: 201 });
+    return ok("POST /api/milestones", milestone.toObject(), userId, 201);
   } catch (error) {
-    console.error("[POST /api/milestones]", error);
-    return NextResponse.json({ error: "Failed to create milestone" }, { status: 500 });
+    return fail((error as Error).message, "POST /api/milestones", undefined, 500);
   }
 }

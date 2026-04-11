@@ -11,13 +11,13 @@ interface FeedClientProps {
   onStageChange:   (stage: ProjectStage | "all") => void;
 }
 
-const STAGES: { value: ProjectStage | "all"; label: string; emoji: string }[] = [
-  { value: "all",      label: "All",      emoji: "🌐" },
-  { value: "idea",     label: "Idea",     emoji: "💡" },
-  { value: "planning", label: "Planning", emoji: "📋" },
-  { value: "building", label: "Building", emoji: "🔨" },
-  { value: "testing",  label: "Testing",  emoji: "🧪" },
-  { value: "launched", label: "Launched", emoji: "🚀" },
+const STAGES: { value: ProjectStage | "all"; label: string; dot: string }[] = [
+  { value: "all",      label: "All",       dot: "bg-zinc-400"   },
+  { value: "idea",     label: "Idea",      dot: "bg-purple-400" },
+  { value: "planning", label: "Planning",  dot: "bg-blue-400"   },
+  { value: "building", label: "Building", dot: "bg-amber-400"  },
+  { value: "testing",  label: "Testing",  dot: "bg-orange-400" },
+  { value: "launched", label: "Launched", dot: "bg-green-400"  },
 ];
 
 export function StageFilter({
@@ -28,19 +28,22 @@ export function StageFilter({
   onChange: (stage: ProjectStage | "all") => void;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       {STAGES.map((s) => (
         <button
           key={s.value}
           onClick={() => onChange(s.value)}
-          className={`flex items-center gap-2.5 text-left px-3 py-2 rounded transition-colors text-[13px] font-medium ${
+          className={`flex items-center gap-2.5 text-left px-3 py-2 rounded-md transition-all text-[13px] font-medium ${
             active === s.value
-              ? "bg-zinc-900 text-white"
-              : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
+              ? "bg-zinc-100 text-zinc-900"
+              : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
           }`}
         >
-          <span className="text-[14px]">{s.emoji}</span>
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active === s.value ? s.dot : "bg-zinc-700"}`} />
           {s.label}
+          {active === s.value && (
+            <span className="ml-auto font-mono text-[10px] text-zinc-500">✓</span>
+          )}
         </button>
       ))}
     </div>
@@ -79,11 +82,7 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
 
   const filtered = useMemo(() => {
     let result = projects;
-
-    if (activeStage !== "all") {
-      result = result.filter((p) => p.stage === activeStage);
-    }
-
+    if (activeStage !== "all") result = result.filter((p) => p.stage === activeStage);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -96,7 +95,6 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
           p.author?.username?.toLowerCase().includes(q)
       );
     }
-
     return result;
   }, [projects, activeStage, search]);
 
@@ -104,28 +102,11 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
 
   return (
     <div>
-      {/* Mobile stage pills
-      <div className="lg:hidden flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-        {STAGES.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => onStageChange(s.value)}
-            className={`flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-full border text-[12px] font-medium font-mono transition-colors ${
-              activeStage === s.value
-                ? "bg-zinc-900 border-zinc-900 text-white"
-                : "border-zinc-200 text-zinc-500 hover:border-zinc-400"
-            }`}
-          >
-            {s.emoji} {s.label}
-          </button>
-        ))}
-      </div> */}
-
       {/* Search */}
-      <div className="mb-4">
+      <div className="mb-5">
         <div className="relative">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600"
             width="14" height="14" viewBox="0 0 24 24"
             fill="none" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round"
@@ -138,12 +119,12 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects, tech, or builders…"
-            className="w-full border border-zinc-200 pl-9 pr-9 py-2.5 text-[13px] text-zinc-900 outline-none focus:border-green-500 transition-colors placeholder:text-zinc-300 rounded"
+            className="w-full bg-zinc-900 border border-zinc-700 pl-10 pr-9 py-2.5 text-[13px] text-zinc-200 outline-none focus:border-green-500 transition-colors placeholder:text-zinc-600 rounded-lg"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500 transition-colors font-mono text-[16px] leading-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors font-mono text-[16px] leading-none"
             >
               ×
             </button>
@@ -153,7 +134,7 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
 
       {/* Count + clear */}
       <div className="flex items-center justify-between mb-5">
-        <span className="font-mono text-[11px] text-zinc-400">
+        <span className="font-mono text-[11px] text-zinc-500">
           {filtered.length === projects.length
             ? `${projects.length} project${projects.length !== 1 ? "s" : ""}`
             : `${filtered.length} of ${projects.length}`}
@@ -161,7 +142,7 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
         {hasFilters && (
           <button
             onClick={() => { onStageChange("all"); setSearch(""); }}
-            className="font-mono text-[11px] text-zinc-400 hover:text-red-400 transition-colors"
+            className="font-mono text-[11px] text-zinc-500 hover:text-red-400 transition-colors"
           >
             × Clear filters
           </button>
@@ -170,21 +151,21 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
 
       {/* Results */}
       {filtered.length === 0 && hasFilters ? (
-        <div className="border border-dashed border-zinc-200 rounded-xl p-12 text-center">
-          <p className="text-zinc-400 text-[14px] mb-2">No projects match your filters.</p>
+        <div className="border border-dashed border-zinc-700 rounded-xl p-12 text-center">
+          <p className="text-zinc-500 text-[14px] mb-2">No projects match your filters.</p>
           <button
             onClick={() => { onStageChange("all"); setSearch(""); }}
-            className="text-[13px] font-semibold text-green-600 hover:text-green-800 transition-colors"
+            className="text-[13px] font-semibold text-green-400 hover:text-green-300 transition-colors"
           >
             Clear filters
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="border border-dashed border-zinc-200 rounded-xl p-12 text-center">
-          <p className="text-zinc-400 text-[14px]">No projects yet. Be the first to build in public.</p>
+        <div className="border border-dashed border-zinc-700 rounded-xl p-12 text-center">
+          <p className="text-zinc-500 text-[14px]">No projects yet. Be the first to build in public.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filtered.map((project) => (
             <ProjectCard key={String(project._id)} project={project} />
           ))}

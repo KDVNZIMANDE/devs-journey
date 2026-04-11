@@ -23,12 +23,6 @@ export default function Footer() {
           >
             Wall
           </Link>
-          <Link
-            href="/sign-up"
-            className="text-[13px] text-zinc-500 no-underline hover:text-zinc-900 transition-colors"
-          >
-            Sign up
-          </Link>
         </div>
 
         <span className="text-[13px] text-zinc-500">

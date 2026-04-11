@@ -6,11 +6,13 @@ const BASE = "/api/projects";
 export const getProjects = async (params?: {
   stage?:     string;
   completed?: boolean;
+  mine?:      boolean;   
   page?:      number;
   limit?:     number;
 }): Promise<ApiResponse<{ projects: Project[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>> => {
   try {
     const query = new URLSearchParams();
+    if (params?.mine      !== undefined) query.set("mine",      String(params.mine));  
     if (params?.stage     !== undefined) query.set("stage",     params.stage);
     if (params?.completed !== undefined) query.set("completed", String(params.completed));
     if (params?.page      !== undefined) query.set("page",      String(params.page));
