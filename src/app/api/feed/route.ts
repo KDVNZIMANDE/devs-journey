@@ -1,5 +1,3 @@
-export const runtime = "edge";
-
 import { auth } from "@clerk/nextjs/server";
 import { addConnection, removeConnection } from "@/lib/sse/connections";
 
