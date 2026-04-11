@@ -1,9 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/mongoose";
 import { Project, User } from "@/models";
 import { updateProjectSchema } from "@/lib/validations";
 import { broadcast } from "@/lib/sse/connections";
+import { ok, fail } from "@/lib/response/response";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,18 +23,15 @@ export async function GET(_req: NextRequest, { params }: Params) {
       { new: true }
     ).lean();
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
+    if (!project) return fail("Project not found", "GET /api/projects/[id]", undefined, 404);
 
     const author = await User.findOne({ clerkId: project.authorId })
       .select("clerkId firstName lastName imageUrl username")
       .lean();
 
-    return NextResponse.json({ ...project, author });
+    return ok("GET /api/projects/[id]", { ...project, author });
   } catch (error) {
-    console.error("[GET /api/projects/[id]]", error);
-    return NextResponse.json({ error: "Failed to fetch project" }, { status: 500 });
+    return fail((error as Error).message, "GET /api/projects/[id]", undefined, 500);
   }
 }
 
@@ -44,41 +42,37 @@ export async function GET(_req: NextRequest, { params }: Params) {
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-    }
+    if (!userId) return fail("Unauthorised", "PATCH /api/projects/[id]", undefined, 401);
 
     const { id } = await params;
-    const body = await req.json();
+    const body   = await req.json();
     const parsed = updateProjectSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Validation failed", issues: parsed.error.flatten() },
-        { status: 400 }
+      return fail(
+        parsed.error.flatten().fieldErrors
+          ? JSON.stringify(parsed.error.flatten().fieldErrors)
+          : "Validation failed",
+        "PATCH /api/projects/[id]",
+        userId,
+        400
       );
     }
 
     await connectDB();
 
     const project = await Project.findById(id);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    if (project.authorId !== userId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    if (!project) return fail("Project not found", "PATCH /api/projects/[id]", userId, 404);
+    if (project.authorId !== userId) return fail("Forbidden", "PATCH /api/projects/[id]", userId, 403);
 
     Object.assign(project, parsed.data);
     await project.save();
 
     broadcast("project_updated", project.toObject());
 
-    return NextResponse.json(project);
+    return ok("PATCH /api/projects/[id]", project.toObject(), userId);
   } catch (error) {
-    console.error("[PATCH /api/projects/[id]]", error);
-    return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+    return fail((error as Error).message, "PATCH /api/projects/[id]", undefined, 500);
   }
 }
 
@@ -87,35 +81,27 @@ export async function PATCH(req: NextRequest, { params }: Params) {
  * Marks a project as completed and adds the developer to the celebration wall.
  * Only the author can complete their own project.
  */
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-    }
+    if (!userId) return fail("Unauthorised", "DELETE /api/projects/[id]", undefined, 401);
 
     const { id } = await params;
     await connectDB();
 
     const project = await Project.findById(id);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    if (project.authorId !== userId) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    if (!project) return fail("Project not found", "DELETE /api/projects/[id]", userId, 404);
+    if (project.authorId !== userId) return fail("Forbidden", "DELETE /api/projects/[id]", userId, 403);
 
     project.isCompleted = true;
     project.completedAt = new Date();
-    project.stage = "launched";
+    project.stage       = "launched";
     await project.save();
 
     broadcast("project_completed", project.toObject());
 
-    return NextResponse.json({ message: "Project marked as complete", project });
+    return ok("DELETE /api/projects/[id]", project.toObject(), userId);
   } catch (error) {
-    console.error("[DELETE /api/projects/[id]]", error);
-    return NextResponse.json({ error: "Failed to complete project" }, { status: 500 });
+    return fail((error as Error).message, "DELETE /api/projects/[id]", undefined, 500);
   }
 }

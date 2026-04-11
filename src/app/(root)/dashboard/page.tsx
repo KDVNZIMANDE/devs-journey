@@ -7,6 +7,7 @@ import { useSession } from "@/context/SessionContext";
 
 import type { Project } from "@/types";
 import { updateUserProfile } from "@/app/api/user";
+import { completeProject } from "@/app/api/projects";
 
 // ─── Stage badge ──────────────────────────────────────────────────────────────
 
@@ -39,20 +40,139 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" });
 }
 
+// ─── Ship It Modal ────────────────────────────────────────────────────────────
+
+function ShipItModal({
+  project,
+  onConfirm,
+  onCancel,
+  shipping,
+  error,
+}: {
+  project: Project;
+  onConfirm: () => void;
+  onCancel: () => void;
+  shipping: boolean;
+  error: string | null;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+      onClick={(e) => { if (e.target === e.currentTarget && !shipping) onCancel(); }}
+    >
+      <div
+        className="bg-white w-full max-w-[420px] rounded-xl border border-zinc-200 shadow-2xl
+                   font-[family-name:var(--font-manrope)]
+                   animate-[shipModal_0.22s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
+      >
+        {/* Green accent bar */}
+        <div className="h-[3px] w-full rounded-t-xl bg-green-600" />
+
+        <div className="px-6 py-5">
+          {/* Header */}
+          <div className="flex items-start gap-3 mb-5">
+            <div className="w-10 h-10 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-base shrink-0">
+              🚀
+            </div>
+            <div>
+              <p className="text-[17px] font-semibold text-zinc-900 mb-0.5">Ship this project?</p>
+              <p className="text-[13px] text-zinc-500 leading-[1.5]">
+                This marks the project as launched and moves it to your Shipped wall.
+              </p>
+            </div>
+          </div>
+
+          {/* Project preview */}
+          <div className="bg-zinc-50 border border-zinc-100 rounded-lg px-4 py-3 mb-4">
+            <p className="text-[14px] font-semibold text-zinc-800 mb-1">{project.title}</p>
+            <p className="text-[12px] text-zinc-500 line-clamp-2 leading-[1.5] mb-2.5">
+              {project.description}
+            </p>
+            {project.techStack.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {project.techStack.slice(0, 4).map((t) => (
+                  <span
+                    key={t}
+                    className="font-mono text-[11px] bg-white border border-zinc-200 text-zinc-500 px-2 py-0.5 rounded-full"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Warning */}
+          <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2.5 mb-5">
+            <svg className="shrink-0 mt-px" width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1.5L1.5 13h13L8 1.5z" stroke="#a16207" strokeWidth="1.2" strokeLinejoin="round"/>
+              <path d="M8 6v3.5M8 11v.5" stroke="#a16207" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+            <p className="text-[12px] text-yellow-800 leading-[1.5]">
+              This cannot be undone. The stage will be set to{" "}
+              <strong>Launched</strong> and removed from your active projects.
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700 rounded-lg mb-4">
+              {error}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onConfirm}
+              disabled={shipping}
+              className="inline-flex items-center gap-2 px-5 py-2 bg-green-600 text-white text-[13px] font-semibold rounded-lg
+                         transition hover:bg-green-700 hover:-translate-y-px active:translate-y-0
+                         disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {shipping ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Shipping…
+                </>
+              ) : (
+                "Ship it ✓"
+              )}
+            </button>
+            <button
+              onClick={onCancel}
+              disabled={shipping}
+              className="px-4 py-2 border border-zinc-200 text-[13px] font-semibold text-zinc-500 rounded-lg
+                         transition hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-40"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { userData, reloadUserData, isLoadingUser, projects, isLoadingProjects } = useSession();
+  const { userData, reloadUserData, isLoadingUser, projects, isLoadingProjects, reloadProjects } = useSession();
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Edit local state — initialised from context
-  const [editBio, setEditBio]           = useState("");
-  const [editGithub, setEditGithub]     = useState("");
+  const [editBio, setEditBio]             = useState("");
+  const [editGithub, setEditGithub]       = useState("");
   const [editPortfolio, setEditPortfolio] = useState("");
-  const [editAvail, setEditAvail]       = useState(true);
+  const [editAvail, setEditAvail]         = useState(true);
+
+  // Ship it state
+  const [shipTarget, setShipTarget]   = useState<Project | null>(null);
+  const [shipping, setShipping]       = useState(false);
+  const [shipError, setShipError]     = useState<string | null>(null);
 
   function openEdit() {
     setEditBio(userData?.bio ?? "");
@@ -96,6 +216,37 @@ export default function DashboardPage() {
     reloadUserData();
   }
 
+  // ── Ship it handlers ───────────────────────────────────────────────────────
+
+  function openShipModal(project: Project) {
+    setShipTarget(project);
+    setShipError(null);
+  }
+
+  function closeShipModal() {
+    if (shipping) return;
+    setShipTarget(null);
+    setShipError(null);
+  }
+
+  async function handleConfirmShip() {
+    if (!shipTarget) return;
+    setShipping(true);
+    setShipError(null);
+
+    const result = await completeProject(String(shipTarget._id));
+
+    setShipping(false);
+
+    if (!result.success) {
+      setShipError(result.message ?? "Failed to ship project. Please try again.");
+      return;
+    }
+
+    setShipTarget(null);
+    reloadProjects?.();
+  }
+
   const activeProjects  = projects.filter((p) => !p.isCompleted);
   const shippedProjects = projects.filter((p) => p.isCompleted);
 
@@ -122,6 +273,17 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-white font-(family-name:--font-manrope)">
+
+      {/* Ship It Modal */}
+      {shipTarget && (
+        <ShipItModal
+          project={shipTarget}
+          onConfirm={handleConfirmShip}
+          onCancel={closeShipModal}
+          shipping={shipping}
+          error={shipError}
+        />
+      )}
 
       {/* Header */}
       <div className="border-b border-zinc-200">
@@ -217,7 +379,11 @@ export default function DashboardPage() {
             ) : (
               <div className="border border-zinc-200 divide-y divide-zinc-100">
                 {activeProjects.map((project) => (
-                  <ProjectRow key={String(project._id)} project={project} />
+                  <ProjectRow
+                    key={String(project._id)}
+                    project={project}
+                    onShipClick={openShipModal}
+                  />
                 ))}
               </div>
             )}
@@ -425,7 +591,13 @@ export default function DashboardPage() {
 
 // ─── Project row ──────────────────────────────────────────────────────────────
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({
+  project,
+  onShipClick,
+}: {
+  project: Project;
+  onShipClick: (project: Project) => void;
+}) {
   return (
     <div className="p-5 hover:border-l-2 hover:border-l-green-500 transition-all group">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -468,6 +640,7 @@ function ProjectRow({ project }: { project: Project }) {
           </Link>
           <button
             type="button"
+            onClick={() => onShipClick(project)}
             className="text-[12px] font-semibold px-3 py-1.5 border border-zinc-200 text-green-600 hover:border-green-500 hover:bg-green-50 transition-colors rounded"
           >
             Ship it ✓

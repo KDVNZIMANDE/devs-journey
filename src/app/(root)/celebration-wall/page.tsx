@@ -1,9 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
+import { connectDB } from "@/lib/db/mongoose";
+import { Project, User } from "@/models";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ShippedProject {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   techStack: string[];
@@ -15,87 +18,50 @@ interface ShippedProject {
     lastName: string;
     username: string;
     imageUrl?: string;
-  };
+  } | null;
 }
 
-// ─── Mock data (replace with real DB query) ───────────────────────────────────
+// ─── Data fetching ────────────────────────────────────────────────────────────
 
-const SHIPPED: ShippedProject[] = [
-  {
-    id: "1",
-    title: "Patchnotes — SaaS changelog widget",
-    description: "Embeddable changelog widget for SaaS products. Drop-in script, markdown-powered, zero dependencies.",
-    techStack: ["React", "Cloudflare Workers", "TypeScript"],
-    repoUrl: "https://github.com",
-    demoUrl: "https://example.com",
-    completedAt: "2025-03-14T00:00:00Z",
-    author: { firstName: "Alex", lastName: "Chen", username: "alexchen" },
-  },
-  {
-    id: "2",
-    title: "Snapgrade — code review grader",
-    description: "AI-powered tool that grades pull requests against team conventions and outputs structured feedback.",
-    techStack: ["Python", "FastAPI", "OpenAI", "React"],
-    repoUrl: "https://github.com",
-    completedAt: "2025-03-01T00:00:00Z",
-    author: { firstName: "Priya", lastName: "Nair", username: "priya_builds" },
-  },
-  {
-    id: "3",
-    title: "Helipad — landing page builder",
-    description: "Drag-and-drop landing page editor that exports clean HTML with no runtime dependencies.",
-    techStack: ["Svelte", "Node.js", "PostgreSQL"],
-    demoUrl: "https://example.com",
-    completedAt: "2025-02-20T00:00:00Z",
-    author: { firstName: "James", lastName: "Okafor", username: "jamesokafor" },
-  },
-  {
-    id: "4",
-    title: "Forkline — recipe version control",
-    description: "Git-inspired tool for tracking recipe iterations. Branch, merge, and diff your cooking experiments.",
-    techStack: ["Go", "SQLite", "HTMX"],
-    repoUrl: "https://github.com",
-    demoUrl: "https://example.com",
-    completedAt: "2025-02-10T00:00:00Z",
-    author: { firstName: "Sofia", lastName: "Mendez", username: "sofiamendez" },
-  },
-  {
-    id: "5",
-    title: "Dusty — automated dependency auditor",
-    description: "CLI tool that scans projects for outdated packages and opens pre-populated upgrade PRs automatically.",
-    techStack: ["Rust", "GitHub API"],
-    repoUrl: "https://github.com",
-    completedAt: "2025-01-28T00:00:00Z",
-    author: { firstName: "Kenji", lastName: "Park", username: "kenjipark" },
-  },
-  {
-    id: "6",
-    title: "Chroma — design token sync",
-    description: "Syncs Figma design tokens directly to your codebase as CSS variables or Tailwind config.",
-    techStack: ["TypeScript", "Figma API", "Node.js"],
-    demoUrl: "https://example.com",
-    completedAt: "2025-01-15T00:00:00Z",
-    author: { firstName: "Amara", lastName: "Wilson", username: "amarawilson" },
-  },
-  {
-    id: "7",
-    title: "Ledgerline — plain-text accounting",
-    description: "Double-entry bookkeeping in plain text files with a fast web viewer and CSV export.",
-    techStack: ["Go", "React", "SQLite"],
-    repoUrl: "https://github.com",
-    completedAt: "2025-01-05T00:00:00Z",
-    author: { firstName: "Tom", lastName: "Brady", username: "tombradydev" },
-  },
-  {
-    id: "8",
-    title: "Inkwell — minimal writing app",
-    description: "Distraction-free writing app with version history, word goals, and offline-first sync.",
-    techStack: ["Electron", "React", "PouchDB"],
-    demoUrl: "https://example.com",
-    completedAt: "2024-12-20T00:00:00Z",
-    author: { firstName: "Leila", lastName: "Hassan", username: "leilahassan" },
-  },
-];
+async function getShippedProjects(): Promise<ShippedProject[]> {
+  await connectDB();
+
+  const projects = await Project.find({ isCompleted: true })
+    .sort({ completedAt: -1 })
+    .lean();
+
+  if (!projects.length) return [];
+
+  const authorIds = [...new Set(projects.map((p) => p.authorId))];
+  const authors = await User.find({ clerkId: { $in: authorIds } })
+    .select("clerkId firstName lastName username imageUrl")
+    .lean();
+
+  const authorMap = new Map(authors.map((a) => [a.clerkId, a]));
+
+  return projects.map((p) => {
+    const author = authorMap.get(p.authorId) ?? null;
+    return {
+      _id:         String(p._id),
+      title:       p.title,
+      description: p.description,
+      techStack:   p.techStack ?? [],
+      repoUrl:     p.repoUrl,
+      demoUrl:     p.demoUrl,
+      completedAt: p.completedAt
+        ? new Date(p.completedAt).toISOString()
+        : new Date(p.updatedAt).toISOString(),
+      author: author
+        ? {
+            firstName: author.firstName,
+            lastName:  author.lastName,
+            username:  author.username,
+            imageUrl:  author.imageUrl,
+          }
+        : null,
+    };
+  });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -109,28 +75,24 @@ const AVATAR_COLORS = [
 ];
 
 function avatarColor(name: string) {
-  const i = name.charCodeAt(0) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[i];
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 }
 
 function formatShipDate(iso: string) {
   return new Date(iso).toLocaleDateString("en", {
     month: "short",
-    day: "numeric",
-    year: "numeric",
+    day:   "numeric",
+    year:  "numeric",
   });
 }
 
 // ─── Page (Server Component) ──────────────────────────────────────────────────
 
-export default function CelebrationWallPage() {
-  // TODO: Replace SHIPPED with real query:
-  // const shipped = await Project.find({ isCompleted: true })
-  //   .sort({ completedAt: -1 })
-  //   .populate("author")
-  //   .lean();
-
-  const totalDevelopers = new Set(SHIPPED.map((p) => p.author.username)).size;
+export default async function CelebrationWallPage() {
+  const shipped = await getShippedProjects();
+  const totalDevelopers = new Set(
+    shipped.map((p) => p.author?.username).filter(Boolean)
+  ).size;
 
   return (
     <div className="min-h-screen bg-white font-[family-name:var(--font-manrope)]">
@@ -156,7 +118,7 @@ export default function CelebrationWallPage() {
             <div className="flex gap-8 pb-1">
               <div>
                 <div className="font-[family-name:var(--font-dm-serif)] text-[36px] text-zinc-900 leading-none">
-                  {SHIPPED.length}
+                  {shipped.length}
                 </div>
                 <div className="text-[12px] text-zinc-400 font-medium mt-1">Projects shipped</div>
               </div>
@@ -197,14 +159,13 @@ export default function CelebrationWallPage() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-zinc-200">
-          {SHIPPED.map((project) => (
-            <WallCard key={project.id} project={project} />
-          ))}
-        </div>
-
-        {/* Empty state (for when the list is empty) */}
-        {SHIPPED.length === 0 && (
+        {shipped.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-zinc-200">
+            {shipped.map((project) => (
+              <WallCard key={project._id} project={project} />
+            ))}
+          </div>
+        ) : (
           <div className="border border-dashed border-zinc-200 p-16 text-center">
             <p className="font-[family-name:var(--font-dm-serif)] text-[20px] text-zinc-400 mb-2">
               Nothing shipped yet.
@@ -222,18 +183,25 @@ export default function CelebrationWallPage() {
 // ─── Wall card ────────────────────────────────────────────────────────────────
 
 function WallCard({ project }: { project: ShippedProject }) {
-  const initials = `${project.author.firstName.charAt(0)}${project.author.lastName.charAt(0)}`;
-  const color = avatarColor(project.author.firstName);
+  const firstName = project.author?.firstName ?? "?";
+  const lastName  = project.author?.lastName  ?? "";
+  const username  = project.author?.username  ?? "unknown";
+  const imageUrl  = project.author?.imageUrl;
+  const initials  = `${firstName.charAt(0)}${lastName.charAt(0)}`;
+  const color     = avatarColor(firstName);
 
   return (
     <div className="bg-white p-6 hover:bg-zinc-50 transition-colors group">
+
       {/* Author row */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-2.5">
-          {project.author.imageUrl ? (
-            <img
-              src={project.author.imageUrl}
-              alt={`${project.author.firstName} ${project.author.lastName}`}
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={`${firstName} ${lastName}`}
+              width={36}
+              height={36}
               className="w-9 h-9 rounded-full object-cover ring-1 ring-zinc-200"
             />
           ) : (
@@ -243,10 +211,10 @@ function WallCard({ project }: { project: ShippedProject }) {
           )}
           <div>
             <p className="text-[13px] font-semibold text-zinc-800 leading-tight">
-              {project.author.firstName} {project.author.lastName}
+              {firstName} {lastName}
             </p>
             <p className="font-mono text-[11px] text-zinc-400 leading-tight mt-0.5">
-              @{project.author.username}
+              @{username}
             </p>
           </div>
         </div>

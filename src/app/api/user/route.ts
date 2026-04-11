@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/mongoose";
 import { User } from "@/models";
@@ -36,6 +36,10 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth();
     if (!userId) return fail("Unauthorised", "POST /api/user", undefined, 401);
 
+    const clerk = await clerkClient();
+    const clerkUser = await clerk.users.getUser(userId);
+    const user_email = clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+
     const body = await req.json();
     const parsed = createUserSchema.safeParse(body);
     if (!parsed.success) {
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const user = await User.create({
       clerkId:            userId,
-      email:              "",
+      email:              user_email,
       firstName:          parsed.data.firstName,
       lastName:           parsed.data.lastName,
       username:           parsed.data.username,
