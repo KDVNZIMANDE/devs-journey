@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useSSE } from "@/hooks/useSSE";
+// import { useSSE } from "@/hooks/useSSE";
 import type { Project, ProjectStage } from "@/types";
 import ProjectCard from "./ProjectCard";
 
@@ -74,11 +74,11 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
     setProjects((prev) => prev.filter((p) => String(p._id) !== String(completed._id)));
   }, []);
 
-  useSSE({
-    new_project:       handleNewProject,
-    project_updated:   handleProjectUpdated,
-    project_completed: handleProjectCompleted,
-  });
+  // useSSE({
+  //   new_project:       handleNewProject,
+  //   project_updated:   handleProjectUpdated,
+  //   project_completed: handleProjectCompleted,
+  // });
 
   const filtered = useMemo(() => {
     let result = projects;

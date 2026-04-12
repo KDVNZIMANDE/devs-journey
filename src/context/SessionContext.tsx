@@ -12,7 +12,7 @@ import { useUser } from "@clerk/nextjs";
 import { User, Project, Milestone, Comment } from "@/types";
 import { getUserProfile } from "@/app/api/user";
 import { getProjects } from "@/app/api/projects";
-import { useSSE } from "@/hooks/useSSE";
+// import { useSSE } from "@/hooks/useSSE";
 
 type SessionContextType = {
   userData:          User | null;
@@ -115,64 +115,64 @@ export default function SessionProvider({ children }: { children: React.ReactNod
 
   // ── SSE ───────────────────────────────────────────────────────────────────
 
-  useSSE(
-    !isSignedIn || !userData?._id
-      ? {}
-      : {
-          new_project: (data) => {
-            const project = data as Project;
-            if (String(project.authorId) !== String(userData?.clerkId)) return;
-            setProjects((prev) =>
-              prev.some((p) => String(p._id) === String(project._id))
-                ? prev
-                : [{ ...project, commentCount: 0 }, ...prev]
-            );
-          },
+  // useSSE(
+  //   !isSignedIn || !userData?._id
+  //     ? {}
+  //     : {
+  //         new_project: (data) => {
+  //           const project = data as Project;
+  //           if (String(project.authorId) !== String(userData?.clerkId)) return;
+  //           setProjects((prev) =>
+  //             prev.some((p) => String(p._id) === String(project._id))
+  //               ? prev
+  //               : [{ ...project, commentCount: 0 }, ...prev]
+  //           );
+  //         },
 
-          project_updated: (data) => {
-            const updated = data as Project;
-            setProjects((prev) =>
-              prev.map((p) =>
-                String(p._id) === String(updated._id)
-                  ? { ...p, ...updated, commentCount: p.commentCount ?? 0 }
-                  : p
-              )
-            );
-          },
+  //         project_updated: (data) => {
+  //           const updated = data as Project;
+  //           setProjects((prev) =>
+  //             prev.map((p) =>
+  //               String(p._id) === String(updated._id)
+  //                 ? { ...p, ...updated, commentCount: p.commentCount ?? 0 }
+  //                 : p
+  //             )
+  //           );
+  //         },
 
-          project_completed: (data) => {
-            const completed = data as Project;
-            setProjects((prev) =>
-              prev.filter((p) => String(p._id) !== String(completed._id))
-            );
-          },
+  //         project_completed: (data) => {
+  //           const completed = data as Project;
+  //           setProjects((prev) =>
+  //             prev.filter((p) => String(p._id) !== String(completed._id))
+  //           );
+  //         },
 
-          new_milestone: (data) => {
-            const { milestone } = data as { milestone: Milestone };
-            const pid = String(milestone.projectId);
-            setMilestones((prev) => ({
-              ...prev,
-              [pid]: [milestone, ...(prev[pid] ?? [])],
-            }));
-          },
+  //         new_milestone: (data) => {
+  //           const { milestone } = data as { milestone: Milestone };
+  //           const pid = String(milestone.projectId);
+  //           setMilestones((prev) => ({
+  //             ...prev,
+  //             [pid]: [milestone, ...(prev[pid] ?? [])],
+  //           }));
+  //         },
 
-          new_comment: (data) => {
-            const comment = data as Comment;
-            const pid = String(comment.projectId);
-            setComments((prev) => ({
-              ...prev,
-              [pid]: [...(prev[pid] ?? []), comment],
-            }));
-            setProjects((prev) =>
-              prev.map((p) =>
-                String(p._id) === pid
-                  ? { ...p, commentCount: (p.commentCount ?? 0) + 1 }
-                  : p
-              )
-            );
-          },
-        }
-  );
+  //         new_comment: (data) => {
+  //           const comment = data as Comment;
+  //           const pid = String(comment.projectId);
+  //           setComments((prev) => ({
+  //             ...prev,
+  //             [pid]: [...(prev[pid] ?? []), comment],
+  //           }));
+  //           setProjects((prev) =>
+  //             prev.map((p) =>
+  //               String(p._id) === pid
+  //                 ? { ...p, commentCount: (p.commentCount ?? 0) + 1 }
+  //                 : p
+  //             )
+  //           );
+  //         },
+  //       }
+  // );
 
   const reloadUserData = useCallback(() => setReloadUser((n) => n + 1), []);
   const reloadProjects = useCallback(() => setReloadProjectsTrigger((n) => n + 1), []);

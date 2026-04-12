@@ -23,25 +23,7 @@ export default clerkMiddleware(async (auth, req) => {
   const onboardingCookie = req.cookies.get("Onboarding_complete")?.value;
   const isOnboarded = onboardingCookie === "true";
 
-  if (!isOnboarded) {
-    // Cookie missing — verify against DB (only happens once per browser session)
-    const existsRes = await fetch(new URL("/api/user/exists", req.url), {
-      headers: { cookie: req.headers.get("cookie") ?? "" },
-    });
-
-    const { exists } = await existsRes.json().catch(() => ({ exists: false }));
-
-    if (!exists && !isOnboardingRoute(req)) {
-      return NextResponse.redirect(new URL("/Onboarding", req.url));
-    }
-
-    if (exists && isOnboardingRoute(req)) {
-      // User is in DB but cookie is missing — set it and redirect
-      const res = NextResponse.redirect(new URL("/feed", req.url));
-      res.cookies.set("Onboarding_complete", "true", { path: "/", maxAge: 31536000, sameSite: "lax" });
-      return res;
-    }
-  } else {
+  if (isOnboarded) {
     // Cookie confirms onboarding is done — block re-visiting onboarding
     if (isOnboardingRoute(req)) {
       return NextResponse.redirect(new URL("/feed", req.url));
