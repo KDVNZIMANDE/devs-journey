@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
- import { useSSE } from "@/hooks/useSSE";
+import { useSession } from "@/context/SessionContext";
 import type { Project, ProjectStage } from "@/types";
 import ProjectCard from "./ProjectCard";
 
@@ -12,9 +12,9 @@ interface FeedClientProps {
 }
 
 const STAGES: { value: ProjectStage | "all"; label: string; dot: string }[] = [
-  { value: "all",      label: "All",       dot: "bg-zinc-400"   },
-  { value: "idea",     label: "Idea",      dot: "bg-purple-400" },
-  { value: "planning", label: "Planning",  dot: "bg-blue-400"   },
+  { value: "all",      label: "All",      dot: "bg-zinc-400"   },
+  { value: "idea",     label: "Idea",     dot: "bg-purple-400" },
+  { value: "planning", label: "Planning", dot: "bg-blue-400"   },
   { value: "building", label: "Building", dot: "bg-amber-400"  },
   { value: "testing",  label: "Testing",  dot: "bg-orange-400" },
   { value: "launched", label: "Launched", dot: "bg-green-400"  },
@@ -51,34 +51,18 @@ export function StageFilter({
 }
 
 export default function FeedClient({ initialProjects, activeStage, onStageChange }: FeedClientProps) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [search, setSearch]     = useState("");
+  const { projects: contextProjects } = useSession();
+  const [search, setSearch] = useState("");
 
-  const handleNewProject = useCallback((data: unknown) => {
-    const project = data as Project;
-    setProjects((prev) => {
-      if (prev.some((p) => String(p._id) === String(project._id))) return prev;
-      return [project, ...prev];
-    });
-  }, []);
-
-  const handleProjectUpdated = useCallback((data: unknown) => {
-    const updated = data as Project;
-    setProjects((prev) =>
-      prev.map((p) => (String(p._id) === String(updated._id) ? { ...p, ...updated } : p))
-    );
-  }, []);
-
-  const handleProjectCompleted = useCallback((data: unknown) => {
-    const completed = data as Project;
-    setProjects((prev) => prev.filter((p) => String(p._id) !== String(completed._id)));
-  }, []);
-
-  useSSE({
-    new_project:       handleNewProject,
-    project_updated:   handleProjectUpdated,
-    project_completed: handleProjectCompleted,
-  });
+  // Merge server-rendered initial projects with live context projects.
+  // Context projects take precedence so real-time updates are reflected.
+  const projects = useMemo(() => {
+    const map = new Map(initialProjects.map((p) => [String(p._id), p]));
+    contextProjects
+      .filter((p) => !p.isCompleted)
+      .forEach((p) => map.set(String(p._id), p));
+    return Array.from(map.values()).filter((p) => !p.isCompleted);
+  }, [initialProjects, contextProjects]);
 
   const filtered = useMemo(() => {
     let result = projects;
@@ -99,6 +83,11 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
   }, [projects, activeStage, search]);
 
   const hasFilters = activeStage !== "all" || search.trim().length > 0;
+
+  const clearFilters = useCallback(() => {
+    onStageChange("all");
+    setSearch("");
+  }, [onStageChange]);
 
   return (
     <div>
@@ -141,7 +130,7 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
         </span>
         {hasFilters && (
           <button
-            onClick={() => { onStageChange("all"); setSearch(""); }}
+            onClick={clearFilters}
             className="font-mono text-[11px] text-zinc-500 hover:text-red-400 transition-colors"
           >
             × Clear filters
@@ -154,7 +143,7 @@ export default function FeedClient({ initialProjects, activeStage, onStageChange
         <div className="border border-dashed border-zinc-700 rounded-xl p-12 text-center">
           <p className="text-zinc-500 text-[14px] mb-2">No projects match your filters.</p>
           <button
-            onClick={() => { onStageChange("all"); setSearch(""); }}
+            onClick={clearFilters}
             className="text-[13px] font-semibold text-green-400 hover:text-green-300 transition-colors"
           >
             Clear filters
