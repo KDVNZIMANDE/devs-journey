@@ -18,7 +18,7 @@ We will use the following stack:
 | Validation | Zod |
 | Database | MongoDB Atlas + Mongoose |
 | Testing | Vitest + Playwright |
-| CI/CD | GitHub Actions → Vercel |
+| CI/CD | GitHub Actions → ? |
 
 ## Rationale
 
@@ -34,6 +34,5 @@ We will use the following stack:
 
 ## Consequences
 
-- Vercel's Edge Runtime does not support all Node.js APIs — any SSE route must use the Edge Runtime and avoid Node-only modules.
 - Clerk manages identity; MongoDB manages app data. A webhook sync must be maintained to keep them consistent.
 - SSE is one-directional. Any future need for bidirectional communication (e.g. real-time collaborative editing) would require revisiting this decision.

@@ -30,7 +30,6 @@ export default async function FeedPage() {
 
       {/* Page header */}
       <div className="relative border-b border-zinc-800 overflow-hidden">
-        {/* Radial glow — matches celebration wall header */}
         <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-green-500/5 blur-3xl" />
 
         <div className="relative mx-auto max-w-[1100px] px-6 py-12">

@@ -45,11 +45,9 @@ export default function OnboardingPage() {
   const [selectedTech, setSelectedTech] = useState<string[]>([]);
   const [availableForCollab, setAvailableForCollab] = useState(true);
 
-  // ── Per-field touched state for inline validation ─────────────────────────
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const touch = (field: string) => setTouched((p) => ({ ...p, [field]: true }));
 
-  // ── Field errors ──────────────────────────────────────────────────────────
   const errors = {
     firstName:   !firstName.trim() ? "First name is required" : firstName.trim().length < 2 ? "Too short" : null,
     lastName:    !lastName.trim()  ? "Last name is required"  : lastName.trim().length < 2  ? "Too short" : null,
