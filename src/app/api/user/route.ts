@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // Guard against duplicate submissions
     const existing = await User.findOne({ clerkId: userId }).lean();
     if (existing) return ok("POST /api/user — already exists", existing, userId, 200);
 
@@ -71,12 +70,15 @@ export async function POST(req: NextRequest) {
       availableForCollab: parsed.data.availableForCollab ?? true,
     });
 
+    await clerk.users.updateUserMetadata(userId, {
+      publicMetadata: { onboarded: true },
+    });
+
     return ok("POST /api/user", user.toObject(), userId, 201);
   } catch (error) {
     return fail((error as Error).message, "POST /api/user", undefined, 500);
   }
 }
-
 /**
  * PATCH /api/user
  * Updates the authenticated user's profile fields.

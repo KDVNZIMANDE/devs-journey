@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       .lean();
 
     const payload = { ...project.toObject(), author };
+    
     broadcast("new_project", payload);
 
     return ok("POST /api/projects", payload, userId, 201);

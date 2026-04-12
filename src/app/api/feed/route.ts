@@ -1,3 +1,4 @@
+
 import { auth } from "@clerk/nextjs/server";
 import { addConnection, removeConnection } from "@/lib/sse/connections";
 
@@ -24,36 +25,37 @@ export async function GET() {
 
   let controller: ReadableStreamDefaultController<Uint8Array>;
 
-  // const stream = new ReadableStream<Uint8Array>({
-  //   start(ctrl) {
-  //     controller = ctrl;
-  //     addConnection(userId, controller);
+  const stream = new ReadableStream<Uint8Array>({
+    start(ctrl) {
+      controller = ctrl;
+      addConnection(userId, controller);
 
-  //     // Send an initial heartbeat so the client knows the connection is live
-  //     const heartbeat = new TextEncoder().encode(": heartbeat\n\n");
-  //     controller.enqueue(heartbeat);
-  //   },
-  //   cancel() {
-  //     removeConnection(userId);
-  //   },
-  // });
+      // Send an initial heartbeat so the client knows the connection is live
+      const heartbeat = new TextEncoder().encode(": heartbeat\n\n");
+      controller.enqueue(heartbeat);
+    },
+    cancel() {
+      clearInterval(keepAlive);
+      removeConnection(userId);
+    },
+  });
 
-  // Keep-alive ping every 25 seconds to prevent proxies from closing idle connections
-  // const keepAlive = setInterval(() => {
-  //   try {
-  //     const ping = new TextEncoder().encode(": ping\n\n");
-  //     controller.enqueue(ping);
-  //   } catch {
-  //     clearInterval(keepAlive);
-  //   }
-  // }, 25_000);
+  // Keep-alive ping every 60 seconds to prevent proxies from closing idle connections
+  const keepAlive = setInterval(() => {
+    try {
+      const ping = new TextEncoder().encode(": ping\n\n");
+      controller.enqueue(ping);
+    } catch {
+      clearInterval(keepAlive);
+    }
+  }, 60_000);
 
-  // return new Response(stream, {
-  //   headers: {
-  //     "Content-Type": "text/event-stream",
-  //     "Cache-Control": "no-cache, no-transform",
-  //     Connection: "keep-alive",
-  //     "X-Accel-Buffering": "no", // Disable Nginx buffering
-  //   },
-  // });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no", // Disable Nginx buffering
+    },
+  });
 }
