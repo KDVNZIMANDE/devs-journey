@@ -30,7 +30,7 @@ vi.stubGlobal("clearInterval", vi.fn());
 import { GET } from "../../../src/app/api/feed/route";
 import { auth } from "@clerk/nextjs/server";
 
-const mockAuth = auth as ReturnType<typeof vi.fn>;
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();

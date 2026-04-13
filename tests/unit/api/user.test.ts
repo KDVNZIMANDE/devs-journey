@@ -60,7 +60,7 @@ vi.mock("next/server", async (importOriginal) => {
 import { GET, POST, PATCH } from "../../../src/app/api/user/route";
 import { auth } from "@clerk/nextjs/server";
 
-const mockAuth = auth as ReturnType<typeof vi.fn>;
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -98,8 +98,8 @@ const validCreateBody = {
   availableForCollab: true,
 };
 
-function makeRequest(url: string, options: RequestInit = {}) {
-  return new NextRequest(url, options);
+function makeRequest(url: string, options: Omit<RequestInit, "signal"> & { signal?: AbortSignal } = {}) {
+  return new NextRequest(url, options as ConstructorParameters<typeof NextRequest>[1]);
 }
 
 beforeEach(() => {
@@ -118,7 +118,7 @@ describe("GET /api/user", () => {
     const res = await GET();
 
     expect(res.status).toBe(200);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean; data: { clerkId: string } }> }).json();
     expect(body.success).toBe(true);
     expect(body.data.clerkId).toBe(USER_ID);
   });
@@ -168,7 +168,7 @@ describe("POST /api/user", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(201);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean; data: { clerkId: string } }> }).json();
     expect(body.success).toBe(true);
   });
 
@@ -308,7 +308,7 @@ describe("PATCH /api/user", () => {
     const res = await PATCH(req);
 
     expect(res.status).toBe(200);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean; data: { bio: string } }> }).json();
     expect(body.success).toBe(true);
     expect(body.data.bio).toBe("Updated bio.");
   });

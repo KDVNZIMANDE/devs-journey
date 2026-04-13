@@ -56,7 +56,7 @@ vi.mock("next/server", async (importOriginal) => {
 import { GET, PATCH, DELETE } from "../../../src/app/api/projects/[id]/route";
 import { auth } from "@clerk/nextjs/server";
 
-const mockAuth = auth as ReturnType<typeof vi.fn>;
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -72,6 +72,7 @@ const fakeProjectLean = {
   supportNeeded: ["code-review"],
   techStack: [],
   isCompleted: false,
+  completedAt: null as Date | null,
   viewCount: 5,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -100,8 +101,8 @@ function makeParams(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
-function makeRequest(url: string, options: RequestInit = {}) {
-  return new NextRequest(url, options);
+function makeRequest(url: string, options: Omit<RequestInit, "signal"> & { signal?: AbortSignal } = {}) {
+  return new NextRequest(url, options as ConstructorParameters<typeof NextRequest>[1]);
 }
 
 beforeEach(() => {
@@ -123,7 +124,7 @@ describe("GET /api/projects/[id]", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean; data: { _id: string; author: typeof fakeAuthor } }> }).json();
     expect(body.success).toBe(true);
     expect(body.data._id).toBe(PROJECT_ID);
     expect(body.data.author).toEqual(fakeAuthor);
@@ -157,7 +158,7 @@ describe("GET /api/projects/[id]", () => {
     );
 
     expect(res.status).toBe(404);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean }> }).json();
     expect(body.success).toBe(false);
   });
 

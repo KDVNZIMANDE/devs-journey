@@ -75,7 +75,7 @@ vi.mock("next/server", async (importOriginal) => {
 import { GET, POST } from "../../../src/app/api/comments/route";
 import { auth } from "@clerk/nextjs/server";
 
-const mockAuth = auth as ReturnType<typeof vi.fn>;
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -102,8 +102,8 @@ const fakeAuthor = {
   username: "bob",
 };
 
-function makeRequest(url: string, options: RequestInit = {}) {
-  return new NextRequest(url, options);
+function makeRequest(url: string, options: Omit<RequestInit, "signal"> & { signal?: AbortSignal } = {}) {
+  return new NextRequest(url, options as ConstructorParameters<typeof NextRequest>[1]);
 }
 
 beforeEach(() => {
@@ -123,7 +123,7 @@ describe("GET /api/comments", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean; data: Array<{ author: typeof fakeAuthor | null }> }> }).json();
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
     expect(body.data[0].author).toEqual(fakeAuthor);
@@ -142,7 +142,7 @@ describe("GET /api/comments", () => {
     const req = makeRequest(`http://localhost/api/comments?projectId=${PROJECT_ID}`);
     const res = await GET(req);
 
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ data: Array<{ author: typeof fakeAuthor | null }> }> }).json();
     expect(body.data[0].author).toBeNull();
   });
 
@@ -153,7 +153,7 @@ describe("GET /api/comments", () => {
     const req = makeRequest(`http://localhost/api/comments?projectId=${PROJECT_ID}`);
     const res = await GET(req);
 
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ data: unknown[] }> }).json();
     expect(body.data).toEqual([]);
   });
 
@@ -181,7 +181,7 @@ describe("POST /api/comments", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(201);
-    const body = await (res as any).json();
+    const body = await (res as { json: () => Promise<{ success: boolean }> }).json();
     expect(body.success).toBe(true);
   });
 
