@@ -25,6 +25,11 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Run tests (production safety)
+        run: npm run test
+        env:
+          NODE_ENV: test
+
       - name: Build
         run: npm run build
         env:
